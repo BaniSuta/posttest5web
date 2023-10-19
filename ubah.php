@@ -1,25 +1,54 @@
 <?php
-require "inc/function.php";
-
 $id = $_GET["id"];
-$ikan = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM ikan WHERE id_ikan = $id"));
+require "inc/koneksi.php";
 
-$query = mysqli_query($conn, "SELECT * FROM habitat");
+$query = "SELECT * FROM transmisi";
+$result = mysqli_query($conn, $query);
+while ($row = mysqli_fetch_assoc($result)) {
+    $transmissions[] = $row;
+}
+
+$stmt = "SELECT * FROM motor WHERE id_motor = $id";
+$hasil = mysqli_query($conn, $stmt);
+$bike = mysqli_fetch_assoc($hasil);
 
 if (isset($_POST["submit"])) {
+    $id = $_POST["id"];
     $nama = htmlspecialchars($_POST["nama"]);
+    $bensin = htmlspecialchars($_POST["bensin"]);
+    $berat = $_POST["berat"];
+    $transmisi = $_POST["transmisi"];
     $harga = $_POST["harga"];
-    $deskripsi = htmlspecialchars($_POST["deskripsi"]);
-    $habitat = $_POST["habitat"];
+    if ($_FILES["gambar"]["name"] != "") {
+        $gambar = $_FILES["gambar"]["name"];
+        $tmpName = $_FILES["gambar"]["tmp_name"];
+        $ekstensigmbr = explode(".", $gambar);
+        $ekstensigmbr = strtolower(end($ekstensigmbr));
+        $nm_gambar = uniqid();
+        $nm_gambar .= ".";
+        $nm_gambar .= $ekstensigmbr;
+        // menyimpan gambar yang diupload pada folder img/data/
+        move_uploaded_file($tmpName, 'img/data/' . $nm_gambar);
 
-    $query = mysqli_query($conn, "INSERT INTO ikan VALUES (NULL, '$nama', $harga, '$deskripsi', $habitat)");
-
-    if ($query) {
-        echo "
-        <script>
-        alert('Berhasil menambahkan data!');
-        document.location.href='produk.php';
-        </script>";
+        $query = "UPDATE motor SET nama_motor = '$nama', tangki = $bensin, berat = $berat, id_transmisi = $transmisi, harga = $harga, gambar = '$nm_gambar' WHERE id_motor = $id";
+        $result = mysqli_query($conn, $query);
+        if ($result) {
+            echo "
+            <script>
+            alert('Berhasil mengubah data motor!');
+            document.location.href='index.php';
+            </script>";
+        }
+    } else {
+        $query = "UPDATE motor SET nama_motor = '$nama', tangki = $bensin, berat = $berat, id_transmisi = $transmisi, harga = $harga WHERE id_motor = $id";
+        $result = mysqli_query($conn, $query);
+        if ($result) {
+            echo "
+            <script>
+            alert('Berhasil mengubah data motor!');
+            document.location.href='index.php';
+            </script>";
+        }
     }
 }
 
@@ -31,42 +60,75 @@ if (isset($_POST["submit"])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tambah Data</title>
-    <link rel="stylesheet" href="style/style-add.css">
+    <link rel="stylesheet" href="style/style-input.css">
 </head>
 
 <body>
-    <?php include "inc/header.php" ?>
+    <?php include "inc/navbar.php" ?>
 
-    <section>
-        <form action="" method="post">
-            <div class="row">
-                <label for="nama">Masukkan Nama Ikan</label>
-                <input type="text" value="" name="nama" id="nama" required>
-            </div>
-            <div class="row">
-                <label for="harga">Masukkan Harga Ikan</label>
-                <input type="number" name="harga" id="harga" required>
-            </div>
-            <div class="row">
-                <label for="deskripsi">Masukkan Deskripsi Ikan</label>
-                <textarea name="deskripsi" id="deskripsi " cols="38" rows="10" required></textarea>
-            </div>
-            <div class="row">
-                <label for="habitat">Pilih Habitat Ikan</label>
-                <select name="habitat" id="habitat">
-                    <?php while ($habitat = mysqli_fetch_assoc($query)) : ?>
-                        <option value="<?= $habitat["id_habitat"] ?>"><?= $habitat["nama_habitat"] ?></option>
-                    <?php endwhile ?>
-                </select>
-            </div>
-            <div class="row akhir">
-                <button type="submit" name="submit">Submit</button>
-            </div>
-        </form>
-    </section>
+    <div class="container">
+        <table>
+            <form action="" method="post" enctype="multipart/form-data">
+                <input type="hidden" name="id" value="<?= $id ?>">
+                <tr>
+                    <td>
+                        <label for="nama">Masukkan Nama Motor</label>
+                    </td>
+                    <td colspan="2">
+                        <input class="ketik" value="<?= $bike["nama_motor"] ?>" type="text" name="nama" id="nama" required>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="bensin">Masukkan Kapasitas Tangki Motor</label>
+                    </td>
+                    <td colspan="2">
+                        <input class="ketik" type="text" value="<?= $bike["tangki"] ?>" onkeypress="return event.charCode >= 48 && event.charCode <= 57 || event.charCode == 46" name="bensin" id="bensin" required>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="berat">Masukkan Berat Motor</label>
+                    </td>
+                    <td colspan="2">
+                        <input class="ketik" type="number" value="<?= $bike["berat"] ?>" name="berat" id="berat" required>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="transmisi">Pilih Transmisi Motor</label>
+                    </td>
+                    <td colspan="2">
+                        <select name="transmisi" id="transmisi">
+                            <?php foreach ($transmissions as $transmisi) : ?>
+                                <option value="<?= $transmisi["id_transmisi"] ?>" <?php if ($transmisi["id_transmisi"] == $bike["id_transmisi"]) : ?> selected <?php endif ?>><?= $transmisi["nama_transmisi"] ?></option>
+                            <?php endforeach ?>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td><label for="harga">Masukkan Harga Motor</label></td>
+                    <td><input type="number" value="<?= $bike["harga"] ?>" name="harga" id="harga"></td>
+                </tr>
+                <tr>
+                    <td><label for="gambar">Masukkan Foto Motor</label></td>
+                    <td><input type="file" name="gambar" id="gambar" accept="image/*"></td>
+                </tr>
+                <tr>
+                    <td class="akhir" align="right" colspan="4">
+                        <div class="for-btn">
+                            <button type="submit" name="submit">Submit</button>
+                        </div>
+                    </td>
+                </tr>
+            </form>
+        </table>
+    </div>
 
+    <?php include "inc/toggleButton.php" ?>
 
     <?php include "inc/footer.php" ?>
+    <script src="js/script-add.js"></script>
     <script src="js/script-index.js"></script>
 </body>
 
